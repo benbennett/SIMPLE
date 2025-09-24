@@ -44,8 +44,6 @@ def train(opt):
         iter_data_time = time.time()
         epoch_iter = 0
         visualizer.reset()
-        if epoch > 1:
-            model.update_learning_rate()
         for i, data in enumerate(train_loader):
             iter_start_time = time.time()
             if total_iters % opt.print_freq == 0:
@@ -76,6 +74,7 @@ def train(opt):
         visualizer.save_to_tensorboard_writer(epoch, losses)
 
         print('End of epoch %d / %d \t Time Taken: %d sec' % (epoch, opt.n_epochs + opt.n_epochs_decay, time.time() - epoch_start_time))
+        model.update_learning_rate(epoch)
 
 def test(opt):
     opt.isTrain = False

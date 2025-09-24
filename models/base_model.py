@@ -105,14 +105,29 @@ class BaseModel(ABC):
         """ Return image paths that are used to load current data"""
         return self.image_paths
 
-    def update_learning_rate(self):
+    def update_learning_rate(self, epoch=None):
         """Update learning rates for all the networks; called at the end of every epoch"""
         old_lr = self.optimizers[0].param_groups[0]['lr']
+        if epoch is not None:
+            # match the behaviour of stepping at the *start* of an epoch by
+            # offsetting the scheduler's epoch index. This keeps learning rate
+            # milestones identical to the previous implementation while
+            # allowing the update to happen after ``optimizer.step()`` has been
+            # called at least once.
+            scheduler_epoch = max(0, epoch - self.opt.epoch_count + 1)
+        else:
+            scheduler_epoch = None
         for scheduler in self.schedulers:
             if self.opt.lr_policy == 'plateau':
-                scheduler.step(self.metric)
+                if scheduler_epoch is None:
+                    scheduler.step(self.metric)
+                else:
+                    scheduler.step(self.metric, epoch=scheduler_epoch)
             else:
-                scheduler.step()
+                if scheduler_epoch is None:
+                    scheduler.step()
+                else:
+                    scheduler.step(scheduler_epoch)
 
         lr = self.optimizers[0].param_groups[0]['lr']
         print('learning rate %.7f -> %.7f' % (old_lr, lr))

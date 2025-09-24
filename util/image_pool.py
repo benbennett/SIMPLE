@@ -106,4 +106,9 @@ class DiscPool(Dataset):
             disc_out: output from the discriminator in the backward pass of generator
             img_idx: indices of the images that the discriminator just processed
         """
+        # torch.amp.autocast may produce half-precision discriminator outputs while the
+        # pool was initialized with float32 tensors.  Mixing these dtypes triggers a
+        # runtime error when updating the buffer, so we ensure both device and dtype
+        # match the pool storage before the assignment.
+        disc_out = disc_out.to(self.disc_out)
         self.disc_out[img_idx] = disc_out

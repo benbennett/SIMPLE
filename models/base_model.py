@@ -145,7 +145,12 @@ class BaseModel(ABC):
         errors_ret = OrderedDict()
         for name in self.loss_names:
             if isinstance(name, str):
-                errors_ret[name] = float(getattr(self, 'loss_' + name))  # float(...) works for both scalar tensor and float number
+                loss_value = getattr(self, 'loss_' + name)
+                if isinstance(loss_value, torch.Tensor):
+                    # detach() avoids inadvertently keeping autograd history when converting tensors to scalars
+                    errors_ret[name] = loss_value.detach().item()
+                else:
+                    errors_ret[name] = float(loss_value)
         return errors_ret
 
     def save_networks(self, epoch):

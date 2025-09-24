@@ -1,5 +1,6 @@
 import os
 import torch
+from torch.cuda.amp import GradScaler, autocast
 from .base_model import BaseModel
 from . import networks
 from util.image_pool import DiscPool
@@ -101,6 +102,9 @@ class AtmeModel(BaseModel):
             self.optimizers.append(self.optimizer_G)
             self.optimizers.append(self.optimizer_D)
 
+        self.use_amp = bool(getattr(opt, 'use_amp', False)) and self.isTrain and torch.cuda.is_available()
+        self.scaler = GradScaler(enabled=self.use_amp)
+
         self.save_noisy = True if opt.n_save_noisy > 0 else False
         if self.save_noisy:
             self.save_DW_idx = torch.randint(len(dataset), (opt.n_save_noisy,))
@@ -166,7 +170,6 @@ class AtmeModel(BaseModel):
         self.loss_D_real = self.criterionGAN(pred_real, True)
         # combine loss and calculate gradients
         self.loss_D = (self.loss_D_fake + self.loss_D_real) * 0.5
-        self.loss_D.backward()
 
     def backward_G(self):
         """Calculate GAN and L1 loss for the generator"""
@@ -178,20 +181,33 @@ class AtmeModel(BaseModel):
         self.loss_G_L1 = self.criterionL1(self.fake_B, self.real_B) * self.opt.lambda_L1
         # combine loss and calculate gradients
         self.loss_G = self.loss_G_GAN + self.loss_G_L1
-        self.loss_G.backward()
 
     def optimize_parameters(self):
-        self.forward()
+        with autocast(enabled=self.use_amp):
+            self.forward()
         # update D
         self.set_requires_grad(self.netD, True)
         self.optimizer_D.zero_grad()
-        self.backward_D()
-        self.optimizer_D.step()
+        with autocast(enabled=self.use_amp):
+            self.backward_D()
+        if self.use_amp:
+            self.scaler.scale(self.loss_D).backward()
+            self.scaler.step(self.optimizer_D)
+        else:
+            self.loss_D.backward()
+            self.optimizer_D.step()
         # update G
         self.set_requires_grad(self.netD, False)
         self.optimizer_G.zero_grad()
-        self.backward_G()
-        self.optimizer_G.step()
+        with autocast(enabled=self.use_amp):
+            self.backward_G()
+        if self.use_amp:
+            self.scaler.scale(self.loss_G).backward()
+            self.scaler.step(self.optimizer_G)
+            self.scaler.update()
+        else:
+            self.loss_G.backward()
+            self.optimizer_G.step()
         # Save discriminator output
         self.disc_pool.insert(self.disc_B.detach(), self.batch_indices)
         if self.save_noisy:  # Save images corresponding to disc_B and Disc_B

@@ -25,6 +25,7 @@ class BaseOptions():
         parser.add_argument('--data_format', required=True, default='nifti', help='data format [dicom, nifti]')
         parser.add_argument('--vol_cube_dim', required=True, type=int, default=512, help='the dimension size of the resulted volume (which has cube shape)')
         parser.add_argument('--isTrain', default=True, action=argparse.BooleanOptionalAction, help='if specified, train the model')
+        parser.add_argument('--eval_plane',required=True, type=str, default='coronal', help='eval plane')
         parser.add_argument('--global_min', type=int, default=0, help='minimum grayscale value of the dataset')
         parser.add_argument('--global_max', type=int, default=0, help='maximum grayscale value of the dataset')
         parser.add_argument('--clamp_en', default=True, action=argparse.BooleanOptionalAction,
@@ -37,7 +38,7 @@ class BaseOptions():
         parser.add_argument('--data_name', type=str, default='data', help='name of the data directory. It decides where to store samples and models')
         parser.add_argument('--preprocess', type=str, default='none', help='scaling and cropping of images at load time [resize_and_crop | crop | scale_width | scale_width_and_crop | none]')
         parser.add_argument('--gpu_ids', type=str, default='0', help='gpu ids: e.g. 0  0,1,2, 0,2. use -1 for CPU')
-        parser.add_argument('--checkpoints_dir', type=str, default='./checkpoints', help='models are saved here')
+        parser.add_argument('--checkpoints_dir', type=str, default='checkpoints', help='models are saved here')
         parser.add_argument('--epoch', type=str, default='latest', help='which epoch to load? set to latest to use latest cached model')
         parser.add_argument('--load_iter', type=int, default='0', help='which iteration to load? if load_iter > 0, the code will load models by iter_[load_iter]; otherwise, the code will load models by [epoch]')
         parser.add_argument('--verbose', action='store_true', help='if specified, print more debugging information')

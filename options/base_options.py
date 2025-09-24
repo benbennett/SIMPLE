@@ -27,6 +27,8 @@ class BaseOptions():
         parser.add_argument('--isTrain', default=True, action=argparse.BooleanOptionalAction, help='if specified, train the model')
         parser.add_argument('--global_min', type=int, default=0, help='minimum grayscale value of the dataset')
         parser.add_argument('--global_max', type=int, default=0, help='maximum grayscale value of the dataset')
+        parser.add_argument('--clamp_en', default=True, action=argparse.BooleanOptionalAction,
+                            help='if specified, clamp intensity values when loading volumes')
         parser.add_argument('--pre_train_G_path', type=str, default='', help='load path for pre-trained generator model')
         parser.add_argument('--save_dir', default='outputs', help='path to save script outputs (should have subfolders trainA, trainB, valA, valB, etc)')
         parser.add_argument('--save_nifti', default=True, action=argparse.BooleanOptionalAction, help='if specified, save results as nifti files')

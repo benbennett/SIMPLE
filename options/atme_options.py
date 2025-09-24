@@ -61,5 +61,7 @@ class AtmeOptions(BaseOptions):
         parser.add_argument('--pool_size', type=int, default=50, help='the size of image buffer that stores previously generated images')
         parser.add_argument('--lr_policy', type=str, default='linear', help='learning rate policy. [linear | step | plateau | cosine]')
         parser.add_argument('--lr_decay_iters', type=int, default=50, help='multiply by a gamma every lr_decay_iters iterations')
+        parser.add_argument('--use_amp', default=True, action=argparse.BooleanOptionalAction,
+                            help='use automatic mixed precision for faster training when CUDA is available')
 
         return parser

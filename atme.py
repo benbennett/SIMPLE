@@ -51,10 +51,12 @@ def train(opt):
     model = create_model(opt, dataset)
     model.setup(opt)
     visualizer = Visualizer(opt)
-    total_iters = 0
+    start_epoch = getattr(model, 'start_epoch', opt.epoch_count)
+    total_iters = getattr(model, 'start_iter', 0)
+    opt.epoch_count = start_epoch
 
 
-    for epoch in range(opt.epoch_count, opt.n_epochs + opt.n_epochs_decay + 1):
+    for epoch in range(start_epoch, opt.n_epochs + opt.n_epochs_decay + 1):
         epoch_start_time = time.time()
         iter_data_time = time.time()
         epoch_iter = 0
@@ -92,12 +94,14 @@ def train(opt):
                 visuals = model.get_current_visuals()
                 slice_num = i if opt.batch_size == 1 else random.randint(0, opt.batch_size)
                 save_atme_images(visuals, save_fig_dir, slice_num, iter_num=total_iters, epoch=epoch)
+                model.save_training_state(epoch, total_iters)
 
             iter_data_time = time.time()
         if epoch % opt.save_epoch_freq == 0:              # cache our model every <save_epoch_freq> epochs
             print('saving the model at the end of epoch %d, iters %d' % (epoch, total_iters))
             model.save_networks('latest')
             model.save_networks(epoch)
+            model.save_training_state(epoch + 1, total_iters)
 
         # Save D_real and D_fake
         visualizer.save_D_losses(model.get_current_losses())

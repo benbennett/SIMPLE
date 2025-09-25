@@ -42,6 +42,8 @@ class BaseModel(ABC):
         self.optimizers = []
         self.image_paths = []
         self.metric = 0  # used for learning rate policy 'plateau'
+        self.start_epoch = opt.epoch_count
+        self.start_iter = 0
 
     @abstractmethod
     def set_input(self, input):
@@ -74,6 +76,8 @@ class BaseModel(ABC):
         if not self.isTrain or opt.continue_train:
             load_suffix = 'iter_%d' % opt.load_iter if opt.load_iter > 0 else opt.epoch
             self.load_networks(load_suffix, pre_train_G_path=opt.pre_train_G_path)
+        if self.isTrain and opt.continue_train:
+            self.load_training_state()
 
 
     def eval(self):
@@ -164,6 +168,53 @@ class BaseModel(ABC):
                     net.cuda(self.gpu_ids[0])
                 else:
                     torch.save(net.state_dict(), save_path)
+
+    def save_training_state(self, epoch, total_iters):
+        """Save optimizer and scheduler states for resuming training later."""
+        if not self.isTrain:
+            return
+
+        state = {
+            'epoch': int(epoch),
+            'total_iters': int(total_iters),
+            'optimizer_states': [optimizer.state_dict() for optimizer in self.optimizers],
+        }
+
+        if hasattr(self, 'schedulers'):
+            state['scheduler_states'] = [scheduler.state_dict() for scheduler in getattr(self, 'schedulers', [])]
+
+        os.makedirs(self.save_dir, exist_ok=True)
+        save_path = os.path.join(self.save_dir, 'training_state.pth')
+        torch.save(state, save_path)
+
+    def load_training_state(self):
+        """Load optimizer and scheduler states to resume training."""
+        load_path = os.path.join(self.save_dir, 'training_state.pth')
+        if not os.path.isfile(load_path):
+            return
+
+        print('loading training state from %s' % load_path)
+        state = torch.load(load_path, map_location='cpu')
+
+        optimizer_states = state.get('optimizer_states', [])
+        if len(optimizer_states) != len(self.optimizers):
+            print('Warning: number of optimizers does not match when loading training state.')
+        for optimizer, opt_state in zip(self.optimizers, optimizer_states):
+            optimizer.load_state_dict(opt_state)
+            for opt_state_value in optimizer.state.values():
+                for k, v in opt_state_value.items():
+                    if isinstance(v, torch.Tensor):
+                        opt_state_value[k] = v.to(self.device)
+
+        if hasattr(self, 'schedulers'):
+            scheduler_states = state.get('scheduler_states', [])
+            if len(scheduler_states) != len(getattr(self, 'schedulers', [])):
+                print('Warning: number of schedulers does not match when loading training state.')
+            for scheduler, scheduler_state in zip(getattr(self, 'schedulers', []), scheduler_states):
+                scheduler.load_state_dict(scheduler_state)
+
+        self.start_epoch = state.get('epoch', self.start_epoch)
+        self.start_iter = state.get('total_iters', self.start_iter)
 
     def __patch_instance_norm_state_dict(self, state_dict, module, keys, i=0):
         """Fix InstanceNorm checkpoints incompatibility (prior to 0.4)"""

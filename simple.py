@@ -30,14 +30,16 @@ def train(opt):
     train_loader = create_simple_train_dataset(opt)
     print('prepare data_loader done')
 
-    total_iters = 0
+    start_epoch = getattr(model, 'start_epoch', opt.epoch_count)
+    total_iters = getattr(model, 'start_iter', 0)
+    opt.epoch_count = start_epoch
 
     figures_path = os.path.join(opt.save_dir, 'figures', 'train')
     mkdir(figures_path)
 
     slice_index = int(opt.patch_size / 2)
 
-    for epoch in range(opt.epoch_count, opt.n_epochs + opt.n_epochs_decay + 1):
+    for epoch in range(start_epoch, opt.n_epochs + opt.n_epochs_decay + 1):
         epoch_start_time = time.time()
         iter_data_time = time.time()
         epoch_iter = 0
@@ -68,6 +70,7 @@ def train(opt):
             print('saving the model at the end of epoch %d, iters %d' % (epoch, total_iters))
             model.save_networks('latest')
             model.save_networks(epoch)
+            model.save_training_state(epoch + 1, total_iters)
 
         losses = model.get_current_losses()
         visualizer.save_to_tensorboard_writer(epoch, losses)

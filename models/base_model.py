@@ -103,15 +103,25 @@ class BaseModel(ABC):
 
     def update_learning_rate(self):
         """Update learning rates for all the networks; called at the end of every epoch"""
-        old_lr = self.optimizers[0].param_groups[0]['lr']
+        old_lrs = [optimizer.param_groups[0]['lr'] for optimizer in self.optimizers]
         for scheduler in self.schedulers:
             if self.opt.lr_policy == 'plateau':
                 scheduler.step(self.metric)
             else:
                 scheduler.step()
+        if hasattr(self.opt, 'lr_min') and self.opt.lr_min not in (None, 0):
+            for optimizer in self.optimizers:
+                for param_group in optimizer.param_groups:
+                    param_group['lr'] = max(param_group['lr'], self.opt.lr_min)
 
-        lr = self.optimizers[0].param_groups[0]['lr']
-        print('learning rate %.7f -> %.7f' % (old_lr, lr))
+        new_lrs = [optimizer.param_groups[0]['lr'] for optimizer in self.optimizers]
+        if len(self.optimizers) == 1:
+            print('learning rate %.7f -> %.7f' % (old_lrs[0], new_lrs[0]))
+        else:
+            lr_changes = ', '.join(
+                '%.7f -> %.7f' % (old, new) for old, new in zip(old_lrs, new_lrs)
+            )
+            print(f'learning rates {lr_changes}')
 
     def get_current_visuals(self):
         """Return visualization images. simple.py will display these images with visdom, and save the images to a HTML"""

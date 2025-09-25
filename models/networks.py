@@ -48,25 +48,62 @@ def get_scheduler(optimizer, opt):
 
     Parameters:
         optimizer          -- the optimizer of the network
-        opt (option class) -- stores all the experiment flags; needs to be a subclass of BaseOptions．　
-                              opt.lr_policy is the name of learning rate policy: linear | step | plateau | cosine
+        opt (option class) -- stores all the experiment flags; needs to be a subclass of BaseOptions．
+                              opt.lr_policy is the name of learning rate policy: linear | step | plateau | cosine | cosine_restart | exponential | poly
 
     For 'linear', we keep the same learning rate for the first <opt.n_epochs> epochs
     and linearly decay the rate to zero over the next <opt.n_epochs_decay> epochs.
-    For other schedulers (step, plateau, and cosine), we use the default PyTorch schedulers.
+    For other schedulers, we use the default PyTorch schedulers (step, plateau, cosine,
+    cosine with warm restarts, exponential decay) or the provided polynomial decay rule.
     See https://pytorch.org/docs/stable/optim.html for more details.
     """
     if opt.lr_policy == 'linear':
         def lambda_rule(epoch):
             lr_l = 1.0 - max(0, epoch + opt.epoch_count - opt.n_epochs) / float(opt.n_epochs_decay + 1)
-            return lr_l
+            min_scale = opt.lr_min / opt.lr if getattr(opt, 'lr_min', 0) and opt.lr > 0 else 0.0
+            return max(lr_l, min_scale)
+
         scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda_rule)
     elif opt.lr_policy == 'step':
-        scheduler = lr_scheduler.StepLR(optimizer, step_size=opt.lr_decay_iters, gamma=0.1)
+        scheduler = lr_scheduler.StepLR(
+            optimizer,
+            step_size=opt.lr_decay_iters,
+            gamma=getattr(opt, 'lr_decay_gamma', 0.1),
+        )
     elif opt.lr_policy == 'plateau':
-        scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.2, threshold=0.01, patience=5)
+        scheduler = lr_scheduler.ReduceLROnPlateau(
+            optimizer,
+            mode='min',
+            factor=getattr(opt, 'lr_plateau_factor', 0.2),
+            threshold=getattr(opt, 'lr_plateau_threshold', 0.01),
+            patience=getattr(opt, 'lr_plateau_patience', 5),
+        )
     elif opt.lr_policy == 'cosine':
-        scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=opt.n_epochs, eta_min=0)
+        scheduler = lr_scheduler.CosineAnnealingLR(
+            optimizer,
+            T_max=opt.n_epochs,
+            eta_min=getattr(opt, 'lr_min', 0),
+        )
+    elif opt.lr_policy == 'cosine_restart':
+        scheduler = lr_scheduler.CosineAnnealingWarmRestarts(
+            optimizer,
+            T_0=getattr(opt, 'lr_restart_period', opt.n_epochs),
+            T_mult=getattr(opt, 'lr_restart_mult', 1),
+            eta_min=getattr(opt, 'lr_min', 0),
+        )
+    elif opt.lr_policy == 'exponential':
+        scheduler = lr_scheduler.ExponentialLR(optimizer, gamma=getattr(opt, 'lr_decay_gamma', 0.1))
+    elif opt.lr_policy == 'poly':
+        total_epochs = max(1, opt.n_epochs + opt.n_epochs_decay)
+
+        def poly_rule(epoch):
+            progress = min(epoch, total_epochs) / float(total_epochs)
+            lr_scale = (1 - progress) ** getattr(opt, 'lr_poly_power', 0.9)
+            if getattr(opt, 'lr_min', 0) and opt.lr > 0:
+                lr_scale = max(lr_scale, opt.lr_min / opt.lr)
+            return lr_scale
+
+        scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=poly_rule)
     else:
         return NotImplementedError('learning rate policy [%s] is not implemented', opt.lr_policy)
     return scheduler

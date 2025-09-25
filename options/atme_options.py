@@ -59,7 +59,15 @@ class AtmeOptions(BaseOptions):
         parser.add_argument('--lr', type=float, default=0.00001, help='initial learning rate for adam')
         parser.add_argument('--gan_mode', type=str, default='lsgan', help='the type of GAN objective. [vanilla| lsgan | wgangp]. vanilla GAN loss is the cross-entropy objective used in the original GAN paper.')
         parser.add_argument('--pool_size', type=int, default=50, help='the size of image buffer that stores previously generated images')
-        parser.add_argument('--lr_policy', type=str, default='linear', help='learning rate policy. [linear | step | plateau | cosine]')
+        parser.add_argument('--lr_policy', type=str, default='linear', help='learning rate policy. [linear | step | plateau | cosine | cosine_restart | exponential | poly]')
         parser.add_argument('--lr_decay_iters', type=int, default=50, help='multiply by a gamma every lr_decay_iters iterations')
+        parser.add_argument('--lr_decay_gamma', type=float, default=0.1, help='multiplicative factor of learning rate decay for step/exponential policies')
+        parser.add_argument('--lr_min', type=float, default=0.0, help='minimum learning rate allowed by schedulers')
+        parser.add_argument('--lr_plateau_factor', type=float, default=0.2, help='multiplicative factor for ReduceLROnPlateau')
+        parser.add_argument('--lr_plateau_patience', type=int, default=5, help='patience in epochs for ReduceLROnPlateau')
+        parser.add_argument('--lr_plateau_threshold', type=float, default=0.01, help='threshold for measuring new optimum in ReduceLROnPlateau')
+        parser.add_argument('--lr_restart_period', type=int, default=50, help='number of epochs before the first cosine restart')
+        parser.add_argument('--lr_restart_mult', type=int, default=1, help='multiplicative factor for increasing restart period in cosine_restart policy')
+        parser.add_argument('--lr_poly_power', type=float, default=0.9, help='power used for polynomial learning rate decay')
 
         return parser

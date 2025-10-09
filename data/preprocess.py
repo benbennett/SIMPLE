@@ -40,7 +40,7 @@ def convert_image_range(itk_image, min_clamp_val, max_clamp_val, clamp_en=False)
 def resample_image(itk_image, plane=None, eval_plane=None, img=None):
     original_size = itk_image.GetSize()
     original_spacing = list(itk_image.GetSpacing())
-    assert original_spacing[0] == original_spacing[1]
+    assert original_spacing[0] == original_spacing[1], f"Spacing mismatch - spacing[0]: {original_spacing[0]}, spacing[1]: {original_spacing[1]}"
     out_spacing = [original_spacing[0], original_spacing[1], original_spacing[0]]
     out_spacing = tuple(out_spacing)
     original_spacing = tuple(original_spacing)
@@ -67,7 +67,7 @@ def resample_org_image(itk_image, img=None):
     original_ax_spacing = list(img.GetSpacing())
     original_spacing = list(itk_image.GetSpacing())
     original_size = itk_image.GetSize()
-    assert original_spacing[0] == original_spacing[1]
+    assert original_spacing[0] == original_spacing[1], f"Spacing mismatch - spacing[0]: {original_spacing[0]}, spacing[1]: {original_spacing[1]}"
     out_spacing = [original_ax_spacing[0], original_ax_spacing[1], original_spacing[2]]
     out_spacing = tuple(out_spacing)
     original_spacing = tuple(original_spacing)
@@ -383,17 +383,17 @@ def simple_train_preprocess(opt):
             cor_atme_vol = torch.load(os.path.join(opt.main_root, opt.atme_cor_root, 'data', 'generation', f'case_{case_idx}', 'atme_vol.pt')).cpu().detach()
             cor_atme_vol = cor_atme_vol[half_d : -half_d, half_d : -half_d, half_d : -half_d]
             cor_atme_patches = extract_patches_with_overlap(cor_atme_vol, opt.patch_size, opt.overlap_ratio)
-            assert (interp_patches.shape[0] == cor_atme_patches.shape[0])
+            assert (interp_patches.shape[0] == cor_atme_patches.shape[0]), f"Shape mismatch - interp_patches: {interp_patches.shape}, cor_atme_patches: {cor_atme_patches.shape}"
         if 'axial' in opt.planes:
             ax_atme_vol = torch.load(os.path.join(opt.main_root, opt.atme_ax_root, 'data', 'generation', f'case_{case_idx}', 'atme_vol.pt')).cpu().detach()
             ax_atme_vol = ax_atme_vol[half_d : -half_d, half_d : -half_d, half_d : -half_d]
             ax_atme_patches = extract_patches_with_overlap(ax_atme_vol, opt.patch_size, opt.overlap_ratio)
-            assert (interp_patches.shape[0] == ax_atme_patches.shape[0])
+            assert (interp_patches.shape[0] == ax_atme_patches.shape[0]), f"Shape mismatch - interp_patches: {interp_patches.shape}, ax_atme_patches: {ax_atme_patches.shape}"
         if 'sagittal' in opt.planes:
             sag_atme_vol = torch.load(os.path.join(opt.main_root, opt.atme_sag_root, 'data', 'generation', f'case_{case_idx}', 'atme_vol.pt')).cpu().detach()
             sag_atme_vol = sag_atme_vol[half_d : -half_d, half_d : -half_d, half_d : -half_d]
             sag_atme_patches = extract_patches_with_overlap(sag_atme_vol, opt.patch_size, opt.overlap_ratio)
-            assert (interp_patches.shape[0] == sag_atme_patches.shape[0])
+            assert (interp_patches.shape[0] == sag_atme_patches.shape[0]), f"Shape mismatch - interp_patches: {interp_patches.shape}, sag_atme_patches: {sag_atme_patches.shape}"
 
 
         for i in range(interp_patches.shape[0]):

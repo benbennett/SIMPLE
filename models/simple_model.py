@@ -23,6 +23,7 @@ class SimpleModel(BaseModel):
         self.model_names = ['G']
 
         for plane in opt.planes:
+            suffix = 'cor'
             if plane == 'coronal' : suffix = 'cor'
             if plane == 'sagittal': suffix = 'sag'
             if plane == 'axial'   : suffix = 'ax'

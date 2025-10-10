@@ -290,12 +290,18 @@ def pad_volume(vol, dim):
     return pad_vol
 
 def change_dim(image, target_dim):
-    if len(image.shape) == 2:
-        target_size = (target_dim, target_dim)
-    elif len(image.shape) == 3:
-        target_size = (image.shape[0], target_dim, target_dim)
+    if isinstance(target_dim, int):
+        if len(image.shape) == 2:
+            target_size = (target_dim, target_dim)
+        elif len(image.shape) == 3:
+            target_size = (target_dim, target_dim, target_dim)
+        else:
+            raise ValueError(f'number of image dimensions is {len(image.shape)} != 2 or 3')
     else:
-        raise ValueError(f'number of image dimensions is {len(image.shape)} != 2 or 3')
+        if len(target_dim) != len(image.shape):
+            raise ValueError(
+                f'target_dim length {len(target_dim)} does not match image dimensions {len(image.shape)}')
+        target_size = tuple(target_dim)
 
     current_size = image.shape
     slices = []
@@ -381,16 +387,19 @@ def simple_train_preprocess(opt):
         interp_patches = extract_patches_with_overlap(interp_vol, opt.patch_size, opt.overlap_ratio)
         if 'coronal' in opt.planes:
             cor_atme_vol = torch.load(os.path.join(opt.main_root, opt.atme_cor_root, 'data', 'generation', f'case_{case_idx}', 'atme_vol.pt')).cpu().detach()
+            cor_atme_vol = change_dim(cor_atme_vol, target_dim=opt.vol_cube_dim)
             cor_atme_vol = cor_atme_vol[half_d : -half_d, half_d : -half_d, half_d : -half_d]
             cor_atme_patches = extract_patches_with_overlap(cor_atme_vol, opt.patch_size, opt.overlap_ratio)
             assert (interp_patches.shape[0] == cor_atme_patches.shape[0]), f"Shape mismatch - interp_patches: {interp_patches.shape}, cor_atme_patches: {cor_atme_patches.shape}"
         if 'axial' in opt.planes:
             ax_atme_vol = torch.load(os.path.join(opt.main_root, opt.atme_ax_root, 'data', 'generation', f'case_{case_idx}', 'atme_vol.pt')).cpu().detach()
+            ax_atme_vol = change_dim(ax_atme_vol, target_dim=opt.vol_cube_dim)
             ax_atme_vol = ax_atme_vol[half_d : -half_d, half_d : -half_d, half_d : -half_d]
             ax_atme_patches = extract_patches_with_overlap(ax_atme_vol, opt.patch_size, opt.overlap_ratio)
             assert (interp_patches.shape[0] == ax_atme_patches.shape[0]), f"Shape mismatch - interp_patches: {interp_patches.shape}, ax_atme_patches: {ax_atme_patches.shape}"
         if 'sagittal' in opt.planes:
             sag_atme_vol = torch.load(os.path.join(opt.main_root, opt.atme_sag_root, 'data', 'generation', f'case_{case_idx}', 'atme_vol.pt')).cpu().detach()
+            sag_atme_vol = change_dim(sag_atme_vol, target_dim=opt.vol_cube_dim)
             sag_atme_vol = sag_atme_vol[half_d : -half_d, half_d : -half_d, half_d : -half_d]
             sag_atme_patches = extract_patches_with_overlap(sag_atme_vol, opt.patch_size, opt.overlap_ratio)
             assert (interp_patches.shape[0] == sag_atme_patches.shape[0]), f"Shape mismatch - interp_patches: {interp_patches.shape}, sag_atme_patches: {sag_atme_patches.shape}"

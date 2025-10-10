@@ -65,6 +65,7 @@ class SimpleOptions(BaseOptions):
         parser.add_argument('--beta1', type=float, default=0.5, help='momentum term of adam')
         parser.add_argument('--lr', type=float, default=0.0002, help='initial learning rate for adam')
         parser.add_argument('--cor_coef', type=float, default=0.5, help='coefficient for coronal component in G loss')
+        parser.add_argument('--sag_coef', type=float, default=0.5, help='coefficient for coronal component in G loss')
         parser.add_argument('--ax_coef', type=float, default=0.5, help='coefficient for axial component in G loss')
         parser.add_argument('--gan_mode', type=str, default='lsgan', help='the type of GAN objective. [vanilla| lsgan | wgangp]. vanilla GAN loss is the cross-entropy objective used in the original GAN paper.')
         parser.add_argument('--pool_size', type=int, default=50, help='the size of image buffer that stores previously generated images')
